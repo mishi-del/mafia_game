@@ -1,4 +1,5 @@
-// Mafia Party Game - 8 Player, Pass & Play, Full Logic
+// Mafia Party Game - 8 Player, Pass & Play, Bot Option, Full Logic
+
 const ROLES = [
   { name: "Mafia", count: 2 },
   { name: "Doctor", count: 1 },
@@ -22,6 +23,7 @@ let savedPlayer = null;
 let round = 1;
 let dayVote = [];
 let votedOut = null;
+let fillWithBots = false;
 
 // Utility Functions
 function shuffle(arr) {
@@ -39,12 +41,16 @@ function assignRoles() {
     for (let i = 0; i < role.count; i++) roleList.push(role.name);
   });
   roleList = shuffle(roleList);
-  roles = players.map((p, idx) => ({ name: p, role: roleList[idx], alive: true }));
+  roles = players.map((p, idx) => ({
+    name: p,
+    role: roleList[idx],
+    alive: true,
+    isBot: p.startsWith("Bot ")
+  }));
   alive = roles.map(r => r.name);
   dead = [];
 }
 
-// DOM helpers
 function $(id) { return document.getElementById(id); }
 
 function render() {
@@ -64,7 +70,13 @@ function render() {
 function renderSetup() {
   $("game-container").innerHTML = `
     <h1 class="kpop-glow">MAFIA PARTY GAME</h1>
-    <h2>Enter 8 Player Names</h2>
+    <h2>Enter up to 8 Player Names</h2>
+    <div style="margin-bottom:18px;text-align:center;">
+      <label style="color:var(--accent);font-weight:bold;">
+        <input type="checkbox" id="bot-toggle" ${fillWithBots ? "checked" : ""} style="transform:scale(1.4);margin-right:7px;">
+        Fill empty spots with bots?
+      </label>
+    </div>
     <form id="setup-form" autocomplete="off">
       <ul class="player-list" id="setup-list">
         ${players.map((p,i) =>
@@ -74,12 +86,12 @@ function renderSetup() {
         <input id="player-input" type="text" maxlength="12" placeholder="Player ${players.length+1} Name" autofocus />
         <button type="submit">Add</button>
       ` : ''}
-      <button class="phase" id="start-btn" ${players.length === 8 ? '' : 'disabled'}>
+      <button class="phase" id="start-btn" ${(players.length >= (fillWithBots ? 1 : 8)) ? '' : 'disabled'}>
         Start Game
       </button>
     </form>
     <div style="text-align:center;margin-top:20px;">
-      <span style="font-size: 0.95em; opacity:0.7;">No bots. Pass device each turn.<br/>K-pop mystery drama style!</span>
+      <span style="font-size: 0.95em; opacity:0.7;">Bots will fill empty seats if you check the box.<br/>Pass device each turn.<br/>K-pop mystery drama style!</span>
     </div>
   `;
   const input = $("player-input");
@@ -96,12 +108,26 @@ function renderSetup() {
   }
   $("start-btn").onclick = function(e) {
     e.preventDefault();
+    if (fillWithBots && players.length < 8) {
+      // Add bots to fill to 8
+      let botNum = 1;
+      while (players.length < 8) {
+        let botName = `Bot ${botNum}`;
+        while (players.includes(botName)) botNum++;
+        players.push(botName);
+        botNum++;
+      }
+    }
     if (players.length === 8) {
       assignRoles();
       currentReveal = 0;
       phase = "reveal";
       render();
     }
+  }
+  $("bot-toggle").onchange = function(e) {
+    fillWithBots = this.checked;
+    render();
   }
 }
 
@@ -139,7 +165,6 @@ function renderReveal() {
     if (currentReveal < roles.length) {
       renderReveal();
     } else {
-      // Begin night phase
       mafiaVoted = [];
       mafiaTargets = [];
       phase = "night";
@@ -158,13 +183,25 @@ function roleDescription(role) {
   }
 }
 
-// --- Night Phase ---
 function renderNight() {
-  // Find next Mafia who hasn't picked yet
   const mafiaPlayers = roles.filter(r => r.role === "Mafia" && r.alive);
   const nextMafia = mafiaPlayers[mafiaVoted.length];
   if (nextMafia) {
-    // Mafia pick
+    if (nextMafia.isBot) {
+      setTimeout(() => {
+        const options = alive.filter(n => n !== nextMafia.name);
+        mafiaTargets.push(shuffle(options)[0]);
+        mafiaVoted.push(nextMafia.name);
+        renderNight();
+      }, 900);
+      $("game-container").innerHTML = `
+        <h2>Night ${round} – Mafia (${mafiaVoted.length+1}/2)</h2>
+        <div style="margin-top:22px;text-align:center;">
+          <b style="color:var(--accent);">${nextMafia.name}</b> (Bot) is choosing...
+        </div>
+      `;
+      return;
+    }
     $("game-container").innerHTML = `
       <h2>Night ${round} – Mafia (${mafiaVoted.length+1}/2)</h2>
       <div style="margin-top:22px;text-align:center;">Pass the device to <b style="color:var(--accent);">${nextMafia.name}</b></div>
@@ -187,27 +224,39 @@ function renderNight() {
       };
     });
   } else {
-    // Mafia votes done: pick the victim (majority/random among ties)
     const voteCount = {};
     mafiaTargets.forEach(t => voteCount[t] = (voteCount[t]||0)+1);
-    // Find max vote(s)
     let max = 0, victims = [];
     Object.entries(voteCount).forEach(([name, cnt]) => {
       if (cnt > max) { max = cnt; victims = [name]; }
       else if (cnt === max) victims.push(name);
     });
-    nightVictim = shuffle(victims)[0]; // random if tie
+    nightVictim = shuffle(victims)[0];
     phase = "doctor";
     render();
   }
 }
 
 function renderDoctor() {
-  // Doctor picks someone to save
   const doctor = roles.find(r => r.role === "Doctor" && r.alive);
   if (!doctor) {
     phase = "detective";
     render();
+    return;
+  }
+  if (doctor.isBot) {
+    setTimeout(() => {
+      const options = alive;
+      doctorTarget = shuffle(options)[0];
+      phase = "detective";
+      render();
+    }, 900);
+    $("game-container").innerHTML = `
+      <h2>Night ${round} – Doctor</h2>
+      <div style="margin-top:22px;text-align:center;">
+        <b style="color:var(--accent);">${doctor.name}</b> (Bot) is choosing...
+      </div>
+    `;
     return;
   }
   $("game-container").innerHTML = `
@@ -234,11 +283,29 @@ function renderDoctor() {
 }
 
 function renderDetective() {
-  // Detective picks someone to investigate
   const detective = roles.find(r => r.role === "Detective" && r.alive);
   if (!detective) {
     phase = "nightResults";
     render();
+    return;
+  }
+  if (detective.isBot) {
+    setTimeout(() => {
+      const options = alive.filter(n => n !== detective.name);
+      detectiveTarget = shuffle(options)[0];
+      const targetRole = roles.find(r => r.name === detectiveTarget).role;
+      detectiveResult = (targetRole === "Mafia") ?
+        `${detectiveTarget} <span class="danger">IS</span> Mafia!` :
+        `${detectiveTarget} <span class="success">is NOT</span> Mafia.`;
+      phase = "nightResults";
+      render();
+    }, 900);
+    $("game-container").innerHTML = `
+      <h2>Night ${round} – Detective</h2>
+      <div style="margin-top:22px;text-align:center;">
+        <b style="color:var(--accent);">${detective.name}</b> (Bot) is choosing...
+      </div>
+    `;
     return;
   }
   $("game-container").innerHTML = `
@@ -269,7 +336,6 @@ function renderDetective() {
 }
 
 function renderNightResults() {
-  // Apply night effects
   let killed = null, saved = null, died = null;
   if (nightVictim && alive.includes(nightVictim)) {
     if (doctorTarget === nightVictim) {
@@ -293,11 +359,9 @@ function renderNightResults() {
     </div>
     <button class="phase" id="start-day">Start Day Phase</button>
   `;
-  // Reset night state for next round
   mafiaTargets = []; mafiaVoted = []; doctorTarget = null;
   detectiveTarget = null; detectiveResult = ""; nightVictim = null; savedPlayer = null;
   $("start-day").onclick = () => {
-    // Check win condition after night
     let res = checkWin();
     if (res) {
       phase = "end";
@@ -311,7 +375,6 @@ function renderNightResults() {
   }
 }
 
-// --- Day Phase ---
 function renderDay() {
   $("game-container").innerHTML = `
     <h2>Day ${round} – Discussion</h2>
@@ -333,6 +396,29 @@ function renderDay() {
 }
 
 function renderVoting(selected = null) {
+  const nextVoterName = alive[dayVote.length];
+  const nextVoter = roles.find(r => r.name === nextVoterName);
+  if (nextVoter && nextVoter.isBot) {
+    setTimeout(() => {
+      const options = alive.filter(n => n !== nextVoter.name);
+      dayVote.push(shuffle(options)[0]);
+      if (dayVote.length < alive.length) {
+        renderVoting();
+      } else {
+        renderVoting();
+      }
+    }, 900);
+    $("game-container").innerHTML = `
+      <h2>Day ${round} – Voting</h2>
+      <div style="margin-top:22px;text-align:center;">
+        <b style="color:var(--accent);">${nextVoter.name}</b> (Bot) is voting...
+      </div>
+      <div style="margin:16px 0 0 0;text-align:center;">
+        Votes so far: <b>${dayVote.length}/${alive.length}</b>
+      </div>
+    `;
+    return;
+  }
   $("game-container").innerHTML = `
     <h2>Day ${round} – Voting</h2>
     <div style="margin:18px 0 6px 0;text-align:center;">
@@ -352,12 +438,10 @@ function renderVoting(selected = null) {
       Reveal Voted Out
     </button>
   `;
-  // Voting logic: each alive player votes (pass device between)
   Array.from(document.querySelectorAll("#vote-list li.alive")).forEach(li => {
     li.onclick = () => {
-      // The voter is the next alive player who hasn't voted yet
       const voter = alive[dayVote.length];
-      if (li.dataset.name !== voter) { // can't self-vote
+      if (li.dataset.name !== voter) {
         dayVote.push(li.dataset.name);
         if (dayVote.length < alive.length) {
           renderVoting();
@@ -371,7 +455,6 @@ function renderVoting(selected = null) {
     }
   });
   $("finish-vote").onclick = () => {
-    // Count votes and reveal who is voted out
     const tally = {};
     dayVote.forEach(name => tally[name] = (tally[name]||0)+1);
     let max = 0, out = [];
@@ -379,7 +462,7 @@ function renderVoting(selected = null) {
       if (cnt > max) { max = cnt; out = [name]; }
       else if (cnt === max) out.push(name);
     });
-    votedOut = shuffle(out)[0]; // random if tie
+    votedOut = shuffle(out)[0];
     roles.find(r => r.name === votedOut).alive = false;
     alive = alive.filter(n => n !== votedOut);
     dead.push(votedOut);
@@ -455,7 +538,6 @@ function renderEnd() {
     <button class="phase" id="restart-btn">Restart Game</button>
   `;
   $("restart-btn").onclick = () => {
-    // Reset all state
     players = [];
     roles = [];
     alive = [];
@@ -472,6 +554,7 @@ function renderEnd() {
     round = 1;
     dayVote = [];
     votedOut = null;
+    fillWithBots = false;
     render();
   }
 }
