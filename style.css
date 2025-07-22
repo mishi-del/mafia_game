@@ -1,0 +1,191 @@
+:root {
+  --bg: #14132b;
+  --panel: #1e1f3a;
+  --primary: #b59cff;
+  --accent: #44d9e6;
+  --danger: #ff3d6c;
+  --success: #98ff98;
+  --text: #efedfa;
+  --border: #422b5f;
+  --shadow: 0 4px 32px 0 rgba(68,217,230,0.05);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  letter-spacing: 0.01em;
+}
+
+#game-container {
+  max-width: 450px;
+  margin: 30px auto;
+  background: var(--panel);
+  padding: 36px 24px 24px 24px;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  border: 2.5px solid var(--border);
+  min-height: 480px;
+}
+
+h1, h2, h3 {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+  margin-top: 0;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+h1 {
+  font-size: 2.2em;
+}
+
+h2 {
+  font-size: 1.3em;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+input[type="text"] {
+  width: 70%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1.5px solid var(--primary);
+  font-size: 1.1em;
+  margin-bottom: 15px;
+  background: #221e3b;
+  color: var(--text);
+  outline: none;
+  margin-right: 8px;
+}
+
+input[type="text"]:focus {
+  border: 2px solid var(--accent);
+}
+
+button {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: var(--bg);
+  font-weight: bold;
+  border: none;
+  padding: 12px 26px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  margin: 12px 0;
+  cursor: pointer;
+  box-shadow: 0 2px 12px 0 rgba(68,217,230,0.17);
+  transition: background 0.15s, color 0.12s;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.phase {
+  width: 100%;
+  margin: 15px 0 0 0;
+  font-size: 1.22em;
+  letter-spacing: 0.04em;
+}
+
+ul.player-list, ul.vote-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+ul.player-list li, ul.vote-list li {
+  background: #221e3b;
+  border-radius: 10px;
+  padding: 9px 18px;
+  margin: 4px 6px;
+  font-size: 1.07em;
+  color: var(--text);
+  border: 2px solid transparent;
+  transition: background 0.15s, border 0.12s;
+}
+
+ul.vote-list li.alive {
+  cursor: pointer;
+  border: 2px solid var(--accent);
+  background: #19173a;
+}
+
+ul.vote-list li.selected {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: bold;
+}
+
+ul.player-list li.dead,
+ul.vote-list li.dead {
+  opacity: 0.46;
+  text-decoration: line-through;
+  background: #3a2042;
+  color: #a769b2;
+  border: 2px solid #a769b2;
+}
+
+.role-badge {
+  background: var(--accent);
+  color: var(--bg);
+  padding: 2px 10px;
+  border-radius: 7px;
+  margin-left: 8px;
+  font-size: 0.96em;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+.result {
+  padding: 12px 0;
+  text-align: center;
+  font-size: 1.23em;
+}
+
+.result .danger {
+  color: var(--danger);
+}
+
+.result .success {
+  color: var(--success);
+}
+
+.result .info {
+  color: var(--accent);
+}
+
+.kpop-glow {
+  text-shadow: 0 0 10px var(--accent), 0 0 16px var(--primary);
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 600px) {
+  #game-container {
+    max-width: 98vw;
+    padding: 13vw 4vw 6vw 4vw;
+    min-height: 85vh;
+  }
+  h1 {
+    font-size: 1.4em;
+  }
+  h2 {
+    font-size: 1.1em;
+  }
+  button {
+    font-size: 1em;
+    padding: 10px 2vw;
+  }
+  ul.player-list li, ul.vote-list li {
+    font-size: 1em;
+    padding: 7px 8px;
+  }
+}
